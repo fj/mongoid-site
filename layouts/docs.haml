@@ -27,19 +27,32 @@
           .roundedbox
             %h3 Contents
         %ul.outline
+          %li.section Getting Started
           %li= link_to_unless_current("Installation", "/docs/installation/")
-          %li= link_to_unless_current("Documents", "/docs/documents/")
-          %li= link_to_unless_current("Associations", "/docs/associations/")
+          %li= link_to_unless_current("Configuration", "/docs/installation/")
+          %li.end= link_to_unless_current("Modeling Documents", "/docs/documents/")
+
+          %li.section Defining Associations
+          %li= link_to_unless_current("Embedded", "/docs/associations/embedded/")
+          %li.end= link_to_unless_current("Relational", "/docs/associations/relational/")
+
+          %li.section Database Interaction
           %li= link_to_unless_current("Persistence", "/docs/persistence/")
           %li= link_to_unless_current("Querying", "/docs/querying/")
+          %li.end= link_to_unless_current("Indexing", "/docs/indexing/")
+
+          %li.section Other Features
           %li= link_to_unless_current("Callbacks", "/docs/callbacks/")
           %li= link_to_unless_current("Validation", "/docs/validation/")
           %li= link_to_unless_current("Inheritance", "/docs/inheritance/")
-          %li= link_to_unless_current("Indexing", "/docs/indexing/")
           %li= link_to_unless_current("Extras", "/docs/extras/")
-          %li= link_to_unless_current("Rake Tasks", "/docs/rake/")
+          %li.end= link_to_unless_current("Rake Tasks", "/docs/rake/")
+
+          %li.section 3rd Party Libraries
           %li= link_to_unless_current("Integration", "/docs/integration/")
-          %li= link_to_unless_current("Extensions", "/docs/extensions/")
+          %li.end= link_to_unless_current("Extensions", "/docs/extensions/")
+
+          %li.section Release Information
           %li= link_to_unless_current("Upgrading", "/docs/upgrading/")
 
       = render "shared/footer"

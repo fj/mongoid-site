@@ -1,0 +1,196 @@
+---
+title: Embedded Associations
+author: Durran Jordan
+category: docs
+---
+.text
+  %p
+    Embedded associations are documents that get nested within other
+    documents in the tree. They can be one-to-one or one-to-many associations
+    and can be nested <i>n</i> levels deep. You define these associations
+    in Mongoid via the following macros:
+
+  %ul
+    %li
+      <tt>embeds_one</tt>
+    %li
+      <tt>embeds_many</tt>
+    %li
+      <tt>embedded_in</tt>
+
+  %p
+    When setting up associations, one document will act as the root for all
+    other objects in the graph, and all associations will be <i>embedded</i>
+    within that root document in the graph as well as the database itself.
+
+  %p
+    Considering the person model from previous examples, associations
+    to other documents would be set up like so:
+
+  <tt>person.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Person
+          include Mongoid::Document
+          field :first_name
+          field :last_name
+          embeds_one :address
+          embeds_many :phones
+        end
+
+  <tt>address.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Address
+          include Mongoid::Document
+          field :street
+          field :city
+          field :state
+          field :post_code
+          embedded_in :person, :inverse_of => :address
+        end
+
+  <tt>phone.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Phone
+          include Mongoid::Document
+          field :country_code, :type => Integer, :default => 1
+          field :number
+          embedded_in :person, :inverse_of => :phones
+        end
+  %p
+    Note that the <tt>embedded_in</tt> macro MUST be defined in order for
+    the embedding to work - don't forget it!
+
+  %p
+    Given the above models, an example person saved to the database would
+    have this structure in BSON, where a <tt>embeds_one</tt> gets embedded
+    as a hash and a <tt>embeds_many</tt> gets embedded as an array of hashes.
+
+  %pre
+    %code.language-ruby
+      :preserve
+        {
+          first_name: "Durran",
+          last_name: "Jordan",
+          address: {
+            street: "30 Rockefeller Plaza",
+            city: "New York",
+            state: "NY",
+            post_code: "10112"
+          },
+          phones: [ { country_code: 1, number: "212-555-1212" } ]
+        }
+
+  %p
+    Associations may have options associated with them, the most important
+    of which is the <i>required</i> option of <tt>inverse_of</tt> on a
+    <tt>embedded_in</tt> association. In order to properly set up the
+    relationships and make sure the object graph is always up to date with
+    any modifications to any object, the <tt>embedded_in</tt> association must
+    provide this option (and be present itself). The value should be set to
+    the name of the association in its parent object. In addition, a
+    <tt>class_name</tt> option may be provided if the name of the association
+    differs from a singular or plural form of the document's class name.
+    We can modify the examples above to show what an updated person would
+    look like with the phones association name changed:
+
+  <tt>person.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Person
+          include Mongoid::Document
+          field :first_name
+          field :last_name
+          embeds_one :address
+          embeds_many :phone_numbers, :class_name => "Phone"
+        end
+
+.title Building and Creating Embedded Associations
+.text
+  %p
+    Associations can be set directly, appended to, built, or created in
+    certain cases:
+
+  <tt>embeds_one</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        person = Person.new
+
+        person.build_address(:street => "Oxford Street")
+        person.create_address(:street => "Oxford Street")
+        person.address = Address.new(:street => "Oxford Street")
+
+  <tt>embeds_many</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        person = Person.new
+
+        person.phone_numbers.build(:number => "415-555-1212")
+        person.phone_numbers.create(:number => "415-555-1212")
+        person.phone_numbers &lt;&lt; Phone.new(:number => "415-555-1212")
+        person.phone_numbers = [ Phone.new(:number => "415-555-1212") ]
+
+  <tt>embedded_in</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        address = Address.new
+        address.person = Person.new(:first_name => "Mark")
+
+.title Polymorphic Embedded Associations
+.text
+  %p
+    By default, all <tt>embedded_in</tt> associations are polymorphic.
+    No matter what name you provide to the macro it will always return the
+    parent object. You may provide the <tt>:polymorphic => true</tt>
+    option if you like as a "security blanket", but it will actually do
+    nothing extra. An example of this given the above models would be:
+
+  <tt>address.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Address
+          include Mongoid::Document
+          field :street
+          field :city
+          field :state
+          field :post_code
+          embedded_in :addressable, :inverse_of => :address
+        end
+
+  %p
+    In the above example, address.addressable would actually return the parent
+    object, which is the Person.
+
+.title Embedded Association Extensions
+.text
+  %p
+    Mongoid supports anonymous association extensions, that have access
+    to the proxied target via the target instance variable.
+
+  <tt>person.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Person
+          include Mongoid::Document
+          field :name
+          embeds_many :addresses do
+            def california
+              @target.select { |address| address.state == "CA" }
+            end
+          end
+        end
+
+  %p
+    In the above example, person.addresses.california would return only
+    CA addresses.

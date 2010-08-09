@@ -1,0 +1,179 @@
+---
+title: Relational Associations
+author: Durran Jordan
+category: docs
+---
+.text
+  %p
+    Relational associations are references to documents in another
+    collection, or objects that reside in another database. The related object
+    currently can be a document or a class that leverages ActiveRecord or
+    DataMapper.
+
+  %p
+    The macros provided for relational associations are:
+
+  %ul
+    %li
+      <tt>references_one</tt>
+    %li
+      <tt>referenced_in</tt>
+    %li
+      <tt>references_many</tt>
+    %li
+      <tt>references_many_as_array</tt>
+    %li
+      <tt>referenced_in_from_array</tt>
+    %li
+      <tt>references_and_referenced_in_many</tt>
+
+  <tt>person.rb</tt>
+  %pre
+    %code.language-ruby
+      :preserve
+        class Person
+          include Mongoid::Document
+          references_one :policy
+          references_many :prescriptions
+          references_many_as_array :preferences
+          references_and_referenced_in_many :posts
+        end
+
+  <tt>policy.rb</tt>
+  %pre
+    %code.language-ruby
+      :preserve
+        class Policy
+          include Mongoid::Document
+          referenced_in :person
+        end
+
+  <tt>prescription.rb</tt>
+  %pre
+    %code.language-ruby
+      :preserve
+        class Prescription
+          include Mongoid::Document
+          referenced_in :person
+        end
+
+  <tt>preferences.rb</tt>
+  %pre
+    %code.language-ruby
+      :preserve
+        class Preference
+          include Mongoid::Document
+          referenced_in_from_array :person
+        end
+
+  <tt>post.rb</tt>
+  %pre
+    %code.language-ruby
+      :preserve
+        class Post
+          include Mongoid::Document
+          references_and_referenced_in_many :people
+        end
+
+.title Where Does The Foreign Key Sit?
+.text
+  %p
+    When using the macros a foreign key field will be created on one side or
+    both of the association in order to link them together. The following
+    diagram illustrated where these fields are stored and what the default key
+    names would be.
+
+  %p.diagram
+    %img(src="/images/docs/associations/reference_relations.png")
+
+  %p
+    You can override the foreign key names by providing a <tt>foreign_key</tt>
+    option to the macro where the foreign_key would be defined. Consult the
+    above diagram for assistance and an example follows.
+
+  %pre
+    %code.language-ruby
+      :preserve
+        class Post
+          include Mongoid::Document
+          referenced_in :person, :foreign_key => :user_id
+        end
+
+
+.title Building and Creating Relational Associations
+.text
+  %p
+    Associations can be set directly, appended to, built, or created in
+    certain cases:
+
+  <tt>references_one</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        person = Person.new
+
+        person.build_policy(:name => "Life")
+        person.create_policy(:name => "Homeowners")
+        person.policy = Policy.new(:name => "Life")
+
+  <tt>references_many<tt>,
+  <tt>references_many_as_array</tt>,
+  <tt>references_and_referenced_in_many</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        person = Person.new
+
+        person.prescriptions.build(:name => "Dilaudid")
+        person.presciptions.create(:name => "Fentanyl")
+        person.presciptions &lt;&lt; Prescription.new(:name => "Palladone")
+        person.presciptions = [ Prescription.new(:name => "MS Contin") ]
+
+  <tt>referenced_in</tt>, <tt>referenced_in_from_array</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        policy = Policy.new
+        policy.person = Person.new(:first_name => "Mark")
+
+.title Cascading Relational Removals
+.text
+  %p
+    Similar to ActiveRecord, if you want child relational associations to be
+    deleted when the parent record is deleted, simply supply the <tt>:dependent</tt>
+    option on the <tt>references_one</tt>, <tt>references_many</tt>, or
+    <tt>references_many_as_array</tt> macro.
+
+  %pre
+    %code.language-ruby
+      :preserve
+        class Person
+          include Mongoid::Document
+          references_one :policy, :dependent => :destroy
+          references_many_as_array :preferences, :dependent => :destroy
+          references_many :prescriptions, :dependent => :delete
+        end
+
+.title Relational Association Extensions
+.text
+  %p
+    Mongoid supports anonymous association extensions, that have access
+    to the proxied target via the target instance variable.
+
+  <tt>person.rb</tt>:
+  %pre
+    %code.language-ruby
+      :preserve
+        class Person
+          include Mongoid::Document
+          field :name
+          references_many :prescriptions do
+            def hydromorphone
+              where(:name.in => [ "Palladone", "Dilaudid" ])
+            end
+          end
+        end
+
+  %p
+    In the above example, person.prescriptions.hydromorphone would return only
+    Prescriptions for Dilaudid and Palladone.
